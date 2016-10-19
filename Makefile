@@ -27,7 +27,8 @@ define base_update
 endef
 
 update:
-	~/env/bin/pip install -U -r requirements/test.txt
+	~/env/bin/pip install --upgrade pip
+	~/env/bin/pip install -U -r requirements/production.txt
 	npm install
 	~/env/bin/python manage.py migrate --noinput --fake-initial
 	~/env/bin/python manage.py collectstatic --noinput
@@ -36,14 +37,14 @@ update:
 
 install:
 	virtualenv ~/env
+	~/env/bin/pip install --upgrade pip
 	~/env/bin/pip install -r requirements/production.txt
 	npm install
 	mkdir -p ~/webfiles/static
 	mkdir -p ~/webfiles/media
-	cp timtec/settings_local_production.py timtec/settings_local.py
-	# cp ../settings_production.py timtec/settings_production.py
-	~/env/bin/python manage.py syncdb --noinput --no-initial-data
-	~/env/bin/python manage.py migrate --noinput --no-initial-data
+	cp timtec/settings_local.py.template timtec/settings_local.py
+	~/env/bin/python manage.py migrate --noinput
+	~/env/bin/python manage.py loaddata initial
 	~/env/bin/python manage.py collectstatic --noinput
 	~/env/bin/python manage.py compilemessages
 	touch ~/wsgi-reload
@@ -121,9 +122,8 @@ setup_js:
 	npm install # --loglevel silent
 
 setup_django: clean
-	python manage.py syncdb --noinput
-	python manage.py migrate --fake --noinput
-	python manage.py loaddata minimal
+	python manage.py migrate --noinput
+	python manage.py loaddata initial
 	python manage.py compilemessages
 
 dumpdata: clean
@@ -139,3 +139,27 @@ reset_db: clean
 
 messages: clean
 	python manage.py makemessages -a -d django
+
+docker_dev:
+	docker-compose -f docker-compose-dev.yml up
+
+docker_dev_build:
+	docker-compose -f docker-compose-dev.yml build
+
+doc_install:
+	virtualenv docs/env
+	make doc_update
+
+doc_update:
+	docs/env/bin/pip install --upgrade pip
+	docs/env/bin/pip install -U -r docs/requirements.txt
+
+doc_build:
+	make doc_update
+	docs/env/bin/mkdocs build
+
+doc_run:
+	make doc_update
+	docs/env/bin/mkdocs serve
+
+docker_dev:

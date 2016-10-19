@@ -5,7 +5,7 @@ import datetime
 
 from django.core.urlresolvers import reverse_lazy
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.views.generic import (DetailView, ListView, DeleteView,
                                   CreateView, UpdateView)
 from django.views.generic.base import RedirectView, View, TemplateView
@@ -31,7 +31,7 @@ from .serializers import (CourseSerializer, CourseProfessorSerializer,
                           CourseAuthorSerializer,
                           CourseCertificationSerializer,
                           CertificationProcessSerializer,
-                          EvaluationSerializer, ProfileSerializer,
+                          EvaluationSerializer, ProfileSerializer, ProfessorMessageUserDetailsSerializer,
                           IfCertificateTemplateSerializer, CertificateTemplateImageSerializer)
 
 from .models import (Course, CourseProfessor, Lesson, StudentProgress,
@@ -39,8 +39,7 @@ from .models import (Course, CourseProfessor, Lesson, StudentProgress,
                      CourseAuthor, CourseCertification, CertificationProcess,
                      Evaluation, CertificateTemplate, IfCertificateTemplate)
 
-from .forms import (ContactForm, RemoveStudentForm,
-                    AddStudentsForm, )
+from .forms import (ContactForm, RemoveStudentForm)
 
 from .permissions import IsProfessorCoordinatorOrAdminPermissionOrReadOnly, IsAdminOrReadOnly
 
@@ -115,7 +114,7 @@ class ContactView(View):
         return response
 
 
-class GenericCourseView(DetailView):
+class GenericCourseView(LoginRequiredMixin, DetailView):
     model = Course
     context_object_name = 'course'
     slug_url_kwarg = 'course_slug'
@@ -200,7 +199,10 @@ class ResumeCourseView(LoginRequiredMixin, RedirectView):
     def get_redirect_url(self, **kwargs):
         course = self.get_object()
         if self.request.user.accepted_terms or not settings.TERMS_ACCEPTANCE_REQUIRED:
-            course_student, _ = CourseStudent.objects.get_or_create(user=self.request.user, course=course)
+            if not course.is_enrolled(self.request.user):
+                course.enroll_student(self.request.user)
+                return reverse_lazy('lesson', args=[course.slug, course.first_lesson().slug])
+            course_student = self.request.user.coursestudent_set.get(course=course)
             last_unit = course_student.resume_next_unit()
             url = reverse_lazy('lesson', args=[course.slug, last_unit.lesson.slug])
             return url + '#' + str(last_unit.position + 1)
@@ -342,6 +344,9 @@ class CourseCertificationDetailView(DetailView):
         from django.core.urlresolvers import resolve
 
         certificate = context.get('object')
+        if not certificate.course_student.can_emmit_receipt():
+            raise Http404
+
         if certificate:
             context['cert_template'] = IfCertificateTemplate.objects.get(course=certificate.course_student.course)
 
@@ -351,7 +356,7 @@ class CourseCertificationDetailView(DetailView):
             from selenium import webdriver
             from signal import SIGTERM
             from time import gmtime, strftime
-            from timtec.settings import MEDIA_ROOT, CERTIFICATE_SIZE
+            from timtec.settings import MEDIA_ROOT, CERTIFICATE_SIZE, PHANTOMJS_PATH
             from PIL import Image
             import os
 
@@ -363,15 +368,14 @@ class CourseCertificationDetailView(DetailView):
             pdf_filename = certificate.link_hash + today + '.pdf'
             pdf_path = os.path.join(MEDIA_ROOT, pdf_filename)
 
-            driver = webdriver.PhantomJS()
+            driver = webdriver.PhantomJS(executable_path=PHANTOMJS_PATH)
             driver.set_window_size(width, height)
             driver.get(url)
             driver.save_screenshot(filename=png_path)
 
             driver.service.process.send_signal(SIGTERM)
             driver.quit()
-
-            Image.open(png_path).convert("RGB").save(pdf_path, format='PDF')
+            Image.open(png_path).convert("RGB").save(pdf_path, format='PDF', quality=100, dpi=(300, 300))
 
             response = HttpResponse(content_type='application/pdf')
             response['Content-Disposition'] = 'attachment; filename=%s' % pdf_filename
@@ -404,6 +408,9 @@ class CertificationProcessViewSet(viewsets.ModelViewSet):
 
 
 class EmitReceiptView(RedirectView):
+
+    permanent = False
+
     def get_redirect_url(self, *args, **kwargs):
         course_id = kwargs.get('course_id')
         if course_id:
@@ -471,7 +478,11 @@ class ProfessorMessageViewSet(viewsets.ModelViewSet):
     lookup_field = 'id'
     filter_fields = ('course',)
     filter_backends = (filters.DjangoFilterBackend,)
-    serializer_class = ProfessorMessageSerializer
+
+    def get_serializer_class(self):
+        if 'id' in self.kwargs.keys():
+            return ProfessorMessageUserDetailsSerializer
+        return ProfessorMessageSerializer
 
     def pre_save(self, obj):
         obj.professor = self.request.user
@@ -480,6 +491,13 @@ class ProfessorMessageViewSet(viewsets.ModelViewSet):
     def post_save(self, obj, created):
         if created:
             obj.send()
+
+    # TODO tests for this
+    def get_queryset(self, *args, **kwargs):
+        queryset = super(ProfessorMessageViewSet, self).get_queryset(*args, **kwargs)
+        if not self.request.user.is_superuser:
+            queryset = queryset.filter(users=self.request.user)
+        return queryset
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -656,15 +674,6 @@ class ClassRemoveUserView(LoginRequiredMixin, CanEditClassMixin, UpdateView):
         return reverse_lazy('class', kwargs={'pk': self.object.id})
 
 
-class ClassAddUsersView(LoginRequiredMixin, CanEditClassMixin, UpdateView):
-    model = Class
-    form_class = AddStudentsForm
-    http_method_names = ['post', ]
-
-    def get_success_url(self):
-        return reverse_lazy('class', kwargs={'pk': self.object.id})
-
-
 class ClassEvaluationsView(LoginRequiredMixin, CanEditClassMixin, UpdateView):
     model = Class
     template_name = 'evaluations.html'
@@ -770,10 +779,10 @@ class UserNotesViewSet(LoginRequiredMixin, viewsets.ReadOnlyModelViewSet):
                     in courses[course.slug].lessons_dict:
                 courses[course.slug].lessons_dict[lesson.slug] = lesson
                 courses[course.slug].lessons_dict[lesson.slug].units_notes = []
-#             unit_type = ContentType.objects.get_for_model(unit)
-#             note = get_object_or_404(Note, user=user, content_type__pk=unit_type.id, object_id=unit.id)
-#             unit.user_note = note
-#             courses[course.slug].lessons_dict[lesson.slug].units_notes.append(unit)
+            unit_type = ContentType.objects.get_for_model(unit)
+            note = get_object_or_404(Note, user=user, content_type__pk=unit_type.id, object_id=unit.id)
+            unit.user_note = note
+            courses[course.slug].lessons_dict[lesson.slug].units_notes.append(unit)
 
         results = []
         for course in courses.values():
