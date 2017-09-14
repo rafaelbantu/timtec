@@ -514,14 +514,14 @@ SOCIALACCOUNT_PROVIDERS = {
     'facebook': {
         'SCOPE': ['email'],
         'METHOD': 'oauth2',
-        'VERSION': 'v2.2',
+        'VERSION': 'v2.10',
     },
 }
 
 # django-registration flag
 # ACCOUNT_ACTIVATION_DAYS = 7
 REGISTRATION_DEFAULT_GROUP_NAME = 'students'
-ACCOUNT_ADAPTER = "accounts.adapter.TimtecAdapter"
+# ACCOUNT_ADAPTER = "accounts.adapter.TimtecAdapter"
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7
