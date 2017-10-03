@@ -30,7 +30,7 @@ from core.views import (CourseView, GenericCourseView, CourseViewSet,
                         EmitReceiptView, ProfileViewSet, LessonThumbViewSet)
 
 from activities.views import AnswerViewSet, ActivityImageUploadViewSet
-from forum.views import (CourseForumView, QuestionView, QuestionCreateView, QuestionViewSet,
+from forum.views import (CourseForumView, QuestionView, QuestionPrivateView, QuestionCreateView, QuestionPrivateCreateView, QuestionViewSet,
                          QuestionVoteViewSet, AnswerVoteViewSet, AnswerViewSet as ForumAnswerViewSet,
                          QuestionNotificationViewSet, QuestionEditViewSet)
 from course_material.views import CourseMaterialView, FileUploadView, CourseMaterialViewSet, CourseMaterialFileViewSet
@@ -143,6 +143,10 @@ urlpatterns = patterns(
     url(r'^forum/(?P<course_slug>[-a-zA-Z0-9_]+)/?$', CourseForumView.as_view(), name='forum'),
     url(r'^forum/question/(?P<slug>[-a-zA-Z0-9_]+)/?$', QuestionView.as_view(), name='forum_question'),
     url(r'^forum/question/add/(?P<course_slug>[-a-zA-Z0-9_]+)/?$', QuestionCreateView.as_view(), name='forum_question_create'),
+
+    # Forum question as private
+    url(r'^course/question/(?P<slug>[-a-zA-Z0-9_]+)/?$', QuestionPrivateView.as_view(), name='forum_question_private'),
+    url(r'^course/question/add/(?P<course_slug>[-a-zA-Z0-9_]+)/?$', QuestionPrivateCreateView.as_view(), name='forum_question_private_create'),
 
     # Course Material
     url(r'^course/(?P<slug>[-a-zA-Z0-9_]+)/material/file_upload/?$', FileUploadView.as_view(), name='file_upload'),

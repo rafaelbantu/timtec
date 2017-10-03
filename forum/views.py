@@ -21,6 +21,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+from django.http import Http404
 from datetime import timedelta
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
@@ -67,6 +68,17 @@ class QuestionView(LoginRequiredMixin, DetailView):
     template_name = 'question.html'
 
 
+class QuestionPrivateView(QuestionView):
+    template_name = 'question-private.html'
+
+    def get(self, request, *args, **kwargs):
+        response = super(QuestionPrivateView, self).get(request, *args, **kwargs)
+        # todo: verify permission to see this shit
+        if 1 == 1:
+            raise Http404
+        return response
+
+
 class QuestionCreateView(LoginRequiredMixin, FormView):
     model = Question
     success_url = reverse_lazy('forum')
@@ -93,6 +105,25 @@ class QuestionCreateView(LoginRequiredMixin, FormView):
             return self.form_invalid(form)
 
 
+class QuestionPrivateCreateView(QuestionCreateView):
+
+    template_name = 'question-private-create.html'
+
+    def post(self, request, *args, **kwargs):
+        new_question = Question()
+        course = get_object_or_404(Course, slug=self.kwargs['course_slug'])
+        new_question.course = course
+        new_question.user = request.user
+        new_question.private_to_coord = True
+        form = QuestionForm(instance=new_question, **self.get_form_kwargs())
+        if form.is_valid():
+            form.save()
+            self.success_url = reverse_lazy('resume_course', kwargs={'slug': new_question.slug})
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
+
 class QuestionEditViewSet(LoginRequiredMixin, viewsets.ModelViewSet):
     model = Question
     serializer_class = QuestionEditSerializer
@@ -106,7 +137,7 @@ class QuestionEditViewSet(LoginRequiredMixin, viewsets.ModelViewSet):
 class QuestionViewSet(LoginRequiredMixin, viewsets.ModelViewSet):
 
     model = Question
-    queryset = Question.objects.all().order_by('-timestamp')
+    queryset = Question.objects.filter(private_to_coord=False).order_by('-timestamp')
     serializer_class = QuestionSerializer
     filter_fields = ('course', 'user', 'hidden')
     # permission_classes = (EditQuestionPermission,)

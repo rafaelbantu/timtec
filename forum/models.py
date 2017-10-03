@@ -5,7 +5,6 @@ from django.template.defaultfilters import slugify
 from autoslug import AutoSlugField
 from core.models import Course, Lesson, ProfessorMessage
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse_lazy
 from django.contrib.sites.models import Site
 
@@ -22,6 +21,7 @@ class Question(models.Model):
     hidden = models.BooleanField(verbose_name=_('Hidden'), default=False)
     hidden_by = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name=_('User'), related_name='hidden_questions', default=None, null=True, blank=True)
     hidden_justification = models.TextField(_('Justification'), default=None, null=True, blank=True)
+    private_to_coord = models.BooleanField(verbose_name=_('Private'), default=False)
 
     def save(self, **kwargs):
         if not self.id and self.title:
