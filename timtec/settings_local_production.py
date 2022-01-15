@@ -31,6 +31,22 @@ CONTACT_RECIPIENT_LIST = ['timtec-dev@listas.hacklab.com.br', ]
 
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
+DEFAULT_RENDERER_CLASSES = (
+    'rest_framework.renderers.JSONRenderer',
+)
+
+if DEBUG:
+    DEFAULT_RENDERER_CLASSES = DEFAULT_RENDERER_CLASSES + (
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    )
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ),
+    'DEFAULT_RENDERER_CLASSES': DEFAULT_RENDERER_CLASSES
+}
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

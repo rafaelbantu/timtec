@@ -43,7 +43,7 @@ django_admin.autodiscover()
 
 flatpages.register()
 
-router = routers.DefaultRouter(trailing_slash=False)
+router = routers.SimpleRouter(trailing_slash=False)
 router.register(r'user', TimtecUserViewSet)
 router.register(r'profile', ProfileViewSet)
 router.register(r'user_admin', TimtecUserAdminViewSet)
