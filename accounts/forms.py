@@ -5,6 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 from timtec.settings import ACCOUNT_REQUIRED_FIELDS as fields
 from accounts.models import UserSocialAccount
+from hcaptcha2.fields import hCaptchaField
 
 
 User = get_user_model()
@@ -77,6 +78,7 @@ class SignupForm(AcceptTermsForm):
     city = forms.CharField(max_length=50, label=_('City'), widget=forms.Select, required=False)
     how_you_know = forms.CharField(max_length=50, label=_('How do you know the platform?'), required=False)
     how_you_know_complement = forms.CharField(max_length=50, label=_('Complement for "How do you know the platform?"'), required=False)
+    hcaptcha = hCaptchaField()
 
     def __init__(self, *args, **kwargs):
         super(SignupForm, self).__init__(*args, **kwargs)

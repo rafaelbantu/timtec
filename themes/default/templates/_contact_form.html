@@ -41,3 +41,12 @@
         <textarea required class="form-control" rows="6" name="{{contact_form.message.name}}"></textarea>
     </div>
 </div>
+
+{{ contact_form.hcaptcha }}
+
+
+
+{% for message in form.captcha.errors %}
+ <div class="notification is-danger">{{ message }}</div>
+{% endfor %}
+

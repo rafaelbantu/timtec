@@ -507,6 +507,8 @@ INSTALLED_APPS = (
 
     # raven has to be the last one
     'raven.contrib.django.raven_compat',
+
+    'hcaptcha2',
 )
 
 
@@ -637,3 +639,7 @@ if DEBUG:
 
 # Fix debug toolbar issue: https://github.com/django-debug-toolbar/django-debug-toolbar/issues/521
 # DEBUG_TOOLBAR_PATCH_SETTINGS = False
+
+HCAPTCHA_FORM_RENDERER = 'hcaptcha2.renderers.DjangoTemplates'
+HCAPTCHA_SITEKEY = ''
+HCAPTCHA_SECRET = ''

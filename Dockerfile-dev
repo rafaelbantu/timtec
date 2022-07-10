@@ -29,8 +29,6 @@ COPY . /app/timtec
 RUN mkdir -p /app/webfiles/static \
    && mkdir -p /app/webfiles/media \
    && pip install -r /app/timtec/requirements/production.txt \
-   && pip install -r /app/timtec/requirements/local.txt \
-   && pip install -r /app/timtec/requirements/test.txt \
    && chown -R timtec /app
 
 WORKDIR /app/timtec

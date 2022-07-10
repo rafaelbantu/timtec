@@ -5,6 +5,8 @@ from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from django.conf import settings
 
+from hcaptcha2.fields import hCaptchaField
+
 from .models import Class
 import logging
 
@@ -17,6 +19,7 @@ class ContactForm(forms.Form):
     name = forms.CharField(label=_('Name'), max_length=128)
     email = forms.EmailField(label=_('Email'))
     message = forms.CharField(label=_('Message'), max_length=255)
+    hcaptcha = hCaptchaField()
 
     def send_email(self):
         subject = self.cleaned_data.get('subject')
